@@ -80,20 +80,53 @@ function auth_admin(): array {
     return $user;
 }
 
-// Encryption
+// Encryption (AES-256-GCM)
 function encrypt_data(string $value): string {
-    $key = $_ENV['ENCRYPT_KEY'] ?? 'defaultkey12345678901234567890ab';
-    $iv  = openssl_random_pseudo_bytes(16);
-    $enc = openssl_encrypt($value, 'AES-256-CBC', $key, 0, $iv);
-    // Store IV and ciphertext separately, both base64-encoded
-    return base64_encode($iv) . ':' . $enc;
+    $key = ENCRYPTION_KEY; // 32 bytes, from config
+    $iv  = openssl_random_pseudo_bytes(12); // 12 bytes recommended for GCM
+
+    $tag = '';
+    $cipher = openssl_encrypt(
+        $value,
+        'aes-256-gcm',
+        $key,
+        OPENSSL_RAW_DATA,
+        $iv,
+        $tag
+    );
+
+    if ($cipher === false) {
+        throw new RuntimeException('Encryption failed');
+    }
+
+    // Store iv + tag + ciphertext together, base64-encoded
+    return base64_encode($iv . $tag . $cipher);
 }
 
 function decrypt_data(string $value): string {
-    $key    = $_ENV['ENCRYPT_KEY'] ?? 'defaultkey12345678901234567890ab';
-    $parts  = explode(':', $value, 2);
-    if (count($parts) !== 2) return '';
-    $iv  = base64_decode($parts[0]);
-    $enc = $parts[1];
-    return openssl_decrypt($enc, 'AES-256-CBC', $key, 0, $iv);
+    $key = ENCRYPTION_KEY;
+    $raw = base64_decode($value, true);
+    
+    if ($raw === false || strlen($raw) < 28) {
+        throw new RuntimeException('Invalid encrypted data format');
+    }
+    
+    $iv  = substr($raw, 0, 12);
+    $tag = substr($raw, 12, 16);
+    $cipher = substr($raw, 28);
+    
+    $plain = openssl_decrypt(
+        $cipher,
+        'aes-256-gcm',
+        $key,
+        OPENSSL_RAW_DATA,
+        $iv,
+        $tag
+    );
+    
+    if ($plain === false) {
+        throw new RuntimeException('Decryption failed: authentication tag verification failed');
+    }
+    
+    return $plain;
 }

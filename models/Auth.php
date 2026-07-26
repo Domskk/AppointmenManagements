@@ -7,46 +7,50 @@ class Auth {
     }
 
     public function register(): void {
-        $data = request_body();
-        $name = trim($data['name'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $password = $data['password'] ?? '';
-        $phone = $data['phone'] ?? null;
-        $role = $data['role'] ?? 'user';
+    $data = request_body();
+    $name = trim($data['name'] ?? '');
+    $email = trim($data['email'] ?? '');
+    $password = $data['password'] ?? '';
+    $phone = $data['phone'] ?? null;
+    $role = $data['role'] ?? 'user';
 
-        if (!$name || !$email || !$password)
-            respond_error('Name, email and password are required', 400);
+    if (!$name || !$email || !$password)
+        respond_error('Name, email and password are required', 400);
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL))
-            respond_error('Invalid email format', 400);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL))
+        respond_error('Invalid email format', 400);
 
-        if (!in_array($role, ['user', 'admin'], true))
-            respond_error('Invalid role', 400);
+    if (!preg_match("/^[A-Za-z\s.'-]+$/", $name))
+        respond_error('Name must contain letters only (no numbers or special characters)', 400);
 
-        $emailHash = hash_hmac('sha256', strtolower($email), $_ENV['JWT_SECRET'] ?? 'secret');
+    if (strlen($password) < 6)
+        respond_error('Password must be at least 6 characters long', 400);
 
-        $emailEnc = encrypt_data($email);
-        $phoneEnc = $phone ? encrypt_data($phone) : null;
-        $passHash = password_hash($password, PASSWORD_DEFAULT);
+    if (!in_array($role, ['user', 'admin'], true))
+        respond_error('Invalid role', 400);
 
-        try {
-            $result = execute(
-                $this->pdo,
-                'CALL registerUser(?, ?, ?, ?, ?, ?)',
-                [$name, $emailEnc, $emailHash, $passHash, $phoneEnc, $role],
-                'one'
-            );
-            respond_success(['user_id' => $result['user_id'] ?? null], 'Registration successful', 201);
+    $emailHash = hash_hmac('sha256', strtolower($email), $_ENV['JWT_SECRET'] ?? 'secret');
+    $emailEnc = encrypt_data($email);
+    $phoneEnc = $phone ? encrypt_data($phone) : null;
+    $passHash = password_hash($password, PASSWORD_DEFAULT);
 
-        } catch (PDOException $e) {
-            $msg = $e->getMessage();
-            if (str_contains($msg, 'Duplicate name'))
-                respond_error('Name already taken', 409);
-            if (str_contains($msg, 'Duplicate email'))
-                respond_error('Email already exists', 409);
-            respond_error('Registration failed', 500);
-        }
+    try {
+        $result = execute(
+            $this->pdo,
+            'CALL registerUser(?, ?, ?, ?, ?, ?)',
+            [$name, $emailEnc, $emailHash, $passHash, $phoneEnc, $role],
+            'one'
+        );
+        respond_success(['user_id' => $result['user_id'] ?? null], 'Registration successful', 201);
+    } catch (PDOException $e) {
+        $msg = $e->getMessage();
+        if (str_contains($msg, 'Duplicate name'))
+            respond_error('Name already taken', 409);
+        if (str_contains($msg, 'Duplicate email'))
+            respond_error('Email already exists', 409);
+        respond_error('Registration failed', 500);
     }
+}
 
     public function login(): void {
         $data = request_body();

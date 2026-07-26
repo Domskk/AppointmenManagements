@@ -4,9 +4,9 @@ require_once __DIR__ . '/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/config');
 $dotenv->load();
 
-require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/config/database.php';
-
+require_once __DIR__ . '/config/encryption.php';
+require_once __DIR__ . '/functions.php';
 
 // CORS
 header('Content-Type: application/json; charset=UTF-8');
@@ -51,20 +51,23 @@ switch ($resource) {
     case 'services':
         if ($method === 'GET') $service->getAll();
         elseif ($method === 'POST') $service->create();
+        elseif ($method === 'PUT') $service->update();
         else respond_error('Method not allowed', 405);
         break;
 
     case 'slots':
         if ($method === 'GET') $slot->getAll();
         elseif ($method === 'POST') $slot->create();
+        elseif ($method === 'DELETE') $slot->delete();
         else respond_error('Method not allowed', 405);
         break;
 
     case 'appointments':
         if ($method === 'POST') $appointment->create();
-        elseif ($method === 'GET' && $sub === 'user' && $id)
-            $appointment->getByUser($id);
-         elseif ($method === 'PUT') $appointment->updateStatus();
+        elseif ($method === 'GET' && $sub === 'user' && $id)$appointment->getByUser($id);
+        elseif ($method === 'GET' && $sub === 'archived') $appointment->getArchived();
+        elseif ($method === 'PUT') $appointment->updateStatus();
+        elseif ($method === 'DELETE')$appointment->delete();
         else respond_error('Endpoint not found', 404);
         break;
 

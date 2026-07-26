@@ -6,17 +6,20 @@ class User {
         $this->pdo = $pdo;
     }
 
-    public function getProfile(): void {
+   public function getProfile(): void {
         $user = auth_user();             
         $data = execute($this->pdo, 'CALL getUserById(?)', [$user['id']], 'one');
-
+        
         if (!$data) respond_error('User not found', 404);
-
-        if (!empty($data['email'])) $data['email'] = decrypt_data($data['email']);
-        if (!empty($data['phone'])) $data['phone'] = decrypt_data($data['phone']);
-
+        
+        try {
+            if (!empty($data['email'])) $data['email'] = decrypt_data($data['email']);
+            if (!empty($data['phone'])) $data['phone'] = decrypt_data($data['phone']);
+        } catch (RuntimeException $e) {
+            respond_error('Failed to decrypt user data', 500);
+        }
+        
         unset($data['password'], $data['email_hash']);
-
         respond_success($data);
     }
 
@@ -39,10 +42,14 @@ class User {
 
         $updated = execute($this->pdo, 'CALL getUserById(?)', [$user['id']], 'one');
         if ($updated) {
+        try {
             if (!empty($updated['email'])) $updated['email'] = decrypt_data($updated['email']);
             if (!empty($updated['phone'])) $updated['phone'] = decrypt_data($updated['phone']);
-            unset($updated['password'], $updated['email_hash']);
+        } catch (RuntimeException $e) {
+            respond_error('Failed to decrypt user data', 500);
         }
+        unset($updated['password'], $updated['email_hash']);
+    }
 
         respond_success($updated ?? [], 'Profile updated successfully');
     }
