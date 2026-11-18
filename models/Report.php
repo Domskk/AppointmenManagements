@@ -19,7 +19,11 @@ class Report {
         if ($from && $to && $from > $to)
             respond_error('"from" date must be before "to" date', 400);
 
-        respond_success(execute($this->pdo, 'CALL getReport(?, ?)', [$from, $to]));
+        $rows = execute($this->pdo, 'CALL getReport(?, ?)', [$from, $to]);
+        respond_success(select_rows($rows, [
+            'date', 'service_name', 'average_wait_time', 'avg_wait_time',
+            'wait_time', 'total_appointments', 'appointment_count',
+        ]));
     }
 
     public function serviceDemand(): void {
@@ -35,7 +39,11 @@ class Report {
         if ($from && $to && $from > $to)
             respond_error('"from" date must be before "to" date', 400);
 
-        respond_success(execute($this->pdo, 'CALL getServiceReport(?, ?)', [$from, $to]));
+        $rows = execute($this->pdo, 'CALL getServiceReport(?, ?)', [$from, $to]);
+        respond_success(select_rows($rows, [
+            'service_id', 'service_name', 'demand', 'total_appointments',
+            'appointment_count',
+        ]));
     }
 
     private function validDate(?string $date): bool {

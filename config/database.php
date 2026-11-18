@@ -20,7 +20,7 @@ class Connection {
             return new PDO($dsn, $_ENV['USER'], $_ENV['PWORD'], $options);
         } catch (PDOException $e) {
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Connection failed: ' . $e->getMessage()]);
+            echo json_encode(['success' => false, 'message' => 'Database connection failed']);
             exit;
         }
     }

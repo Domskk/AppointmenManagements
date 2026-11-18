@@ -12,7 +12,7 @@ class Auth {
     $email = trim($data['email'] ?? '');
     $password = $data['password'] ?? '';
     $phone = $data['phone'] ?? null;
-    $role = $data['role'] ?? 'user';
+    $role = 'user';
 
     if (!$name || !$email || !$password)
         respond_error('Name, email and password are required', 400);
@@ -26,22 +26,19 @@ class Auth {
     if (strlen($password) < 6)
         respond_error('Password must be at least 6 characters long', 400);
 
-    if (!in_array($role, ['user', 'admin'], true))
-        respond_error('Invalid role', 400);
-
     $emailHash = hash_hmac('sha256', strtolower($email), $_ENV['JWT_SECRET'] ?? 'secret');
     $emailEnc = encrypt_data($email);
     $phoneEnc = $phone ? encrypt_data($phone) : null;
     $passHash = password_hash($password, PASSWORD_DEFAULT);
 
     try {
-        $result = execute(
+        execute(
             $this->pdo,
             'CALL registerUser(?, ?, ?, ?, ?, ?)',
             [$name, $emailEnc, $emailHash, $passHash, $phoneEnc, $role],
             'one'
         );
-        respond_success(['user_id' => $result['user_id'] ?? null], 'Registration successful', 201);
+        respond_success([], 'Registration successful', 201);
     } catch (PDOException $e) {
         $msg = $e->getMessage();
         if (str_contains($msg, 'Duplicate name'))
@@ -69,7 +66,6 @@ class Auth {
         $token = create_jwt([
             'id' => $found['id'],
             'name' => $found['name'],
-            'email' => $email,
             'role' => $found['role'] ?? 'user',
         ]);
 
@@ -78,7 +74,6 @@ class Auth {
             'user'  => [
                 'id' => $found['id'],
                 'name' => $found['name'],
-                'email' => $email,
                 'role' => $found['role'] ?? 'user',
             ],
         ], 'Login successful');

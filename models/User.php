@@ -19,8 +19,7 @@ class User {
             respond_error('Failed to decrypt user data', 500);
         }
         
-        unset($data['password'], $data['email_hash']);
-        respond_success($data);
+        respond_success(select_fields($data, ['id', 'name', 'email', 'phone']));
     }
 
     public function updateProfile(): void {
@@ -48,7 +47,7 @@ class User {
         } catch (RuntimeException $e) {
             respond_error('Failed to decrypt user data', 500);
         }
-        unset($updated['password'], $updated['email_hash']);
+        $updated = select_fields($updated, ['id', 'name', 'email', 'phone']);
     }
 
         respond_success($updated ?? [], 'Profile updated successfully');

@@ -4,16 +4,30 @@ function execute(PDO $pdo, string $sql, array $params = [], string $mode = 'all'
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
 
-    return match($mode) {
+    $result = match($mode) {
         'one'  => $stmt->fetch(),
         'none' => true,
         default => $stmt->fetchAll(),
     };
+    $stmt->closeCursor();
+
+    return $result;
 }
 
 // JSON request body 
 function request_body(): array {
     return json_decode(file_get_contents('php://input'), true) ?? [];
+}
+
+function select_fields(array $record, array $fields): array {
+    return array_intersect_key($record, array_flip($fields));
+}
+
+function select_rows(array $records, array $fields): array {
+    return array_map(
+        static fn(array $record): array => select_fields($record, $fields),
+        $records
+    );
 }
 
 // Response helpers 
